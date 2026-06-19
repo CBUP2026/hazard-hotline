@@ -3,38 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hazard Hotline</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<title>Hazard Hotline — Report a Hazard</title>
 <style>
   :root {
-    --black: #1a1a18;
-    --white: #f5f4f0;
-    --yellow: #f5c842;
-    --yellow-dark: #d4a90e;
-    --red: #c0392b;
-    --orange: #e67e22;
-    --green: #27ae60;
-    --gray: #6b6b65;
-    --gray-light: #e8e7e2;
-    --low: #27ae60;
-    --medium: #e67e22;
-    --high: #c0392b;
-    --critical: #7b0000;
+    --black: #1a1a18; --white: #f5f4f0; --yellow: #f5c842; --yellow-dark: #d4a90e;
+    --red: #c0392b; --orange: #e67e22; --green: #27ae60; --gray: #6b6b65;
+    --low: #27ae60; --medium: #e67e22; --high: #c0392b; --critical: #7b0000;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Georgia', serif; background: var(--black); color: var(--white); min-height: 100vh; }
+  body { font-family: Georgia, serif; background: var(--black); color: var(--white); min-height: 100vh; }
 
-  nav { display: flex; background: var(--yellow); border-bottom: 3px solid var(--black); }
-  .nav-tab { flex: 1; padding: 14px 10px; text-align: center; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; color: var(--black); border: none; background: transparent; transition: background 0.15s; }
-  .nav-tab:hover { background: rgba(0,0,0,0.1); }
-  .nav-tab.active { background: var(--black); color: var(--yellow); }
-  .nav-tab + .nav-tab { border-left: 2px solid var(--black); }
+  .top-bar { background: var(--yellow); padding: 12px 16px; border-bottom: 3px solid var(--black); display: flex; align-items: center; gap: 12px; }
+  .top-bar .icon { font-size: 22px; }
+  .top-bar span { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--black); }
 
-  .view { display: none; }
-  .view.active { display: block; }
-
-  /* ── REPORT FORM ── */
-  .report-wrap { max-width: 520px; margin: 0 auto; padding: 24px 16px 40px; }
+  .report-wrap { max-width: 520px; margin: 0 auto; padding: 24px 16px 48px; }
   .report-header { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid var(--yellow); }
   .hazard-icon { width: 48px; height: 48px; background: var(--yellow); display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
   .report-header h1 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.2; }
@@ -44,12 +27,7 @@
   .field { margin-bottom: 20px; }
   .field label { display: block; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray); margin-bottom: 7px; }
   .field label span.req { color: var(--yellow); margin-left: 2px; }
-  .field input, .field select, .field textarea {
-    width: 100%; background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white);
-    font-family: Arial, sans-serif; font-size: 15px; padding: 11px 13px;
-    outline: none; transition: border-color 0.15s; border-radius: 0;
-    -webkit-appearance: none; appearance: none;
-  }
+  .field input, .field select, .field textarea { width: 100%; background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white); font-family: Arial, sans-serif; font-size: 15px; padding: 11px 13px; outline: none; transition: border-color 0.15s; border-radius: 0; -webkit-appearance: none; appearance: none; }
   .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--yellow); }
   .field textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
   .field select option { background: #2a2a26; }
@@ -64,18 +42,17 @@
   .sev-label[data-sev="Critical"] .sev-pill { --c: var(--critical); }
   .sev-label input:checked + .sev-pill { background: var(--c); color: #fff; border-color: var(--c); }
 
-  /* Photo zone */
-  .photo-drop { border: 2px dashed #3a3a35; padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.15s; position: relative; }
+  .photo-drop { border: 2px dashed #3a3a35; padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.15s; }
   .photo-drop:hover { border-color: var(--yellow); }
   .photo-drop .icon { font-size: 28px; }
   .photo-drop p { font-size: 13px; color: var(--gray); font-family: Arial, sans-serif; margin-top: 4px; }
   .photo-drop .privacy-note { font-size: 11px; color: rgba(245,200,66,0.7); margin-top: 6px; }
   #photo-input { display: none; }
-
   #photo-preview-wrap { display: none; margin-top: 10px; }
   #photo-preview-wrap img { max-width: 100%; max-height: 160px; object-fit: cover; display: block; }
+  .photo-clear { margin-top: 8px; font-size: 12px; font-family: Arial, sans-serif; color: var(--gray); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
+  .photo-clear:hover { color: var(--white); }
 
-  /* AI analysis status */
   .ai-status { margin-top: 10px; padding: 10px 12px; background: #2a2a26; border-left: 3px solid var(--yellow); font-family: Arial, sans-serif; font-size: 12px; display: none; }
   .ai-status.processing { border-color: var(--orange); }
   .ai-status.done { border-color: var(--green); }
@@ -86,118 +63,41 @@
   .ai-status-label.error { color: #d45d4d; }
   .ai-status-body { color: #b0b0a8; line-height: 1.5; }
 
-  .photo-clear { margin-top: 8px; font-size: 12px; font-family: Arial, sans-serif; color: var(--gray); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
-  .photo-clear:hover { color: var(--white); }
+  .privacy-callout { background: rgba(245,200,66,0.08); border: 1px solid rgba(245,200,66,0.25); padding: 12px 14px; margin-bottom: 12px; }
+  .privacy-callout p { font-family: Arial, sans-serif; font-size: 12px; color: #c8c8c0; line-height: 1.6; }
+  .privacy-callout strong { color: var(--yellow); }
 
   .submit-btn { width: 100%; padding: 16px; background: var(--yellow); color: var(--black); font-family: 'Arial Narrow', Arial, sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: none; cursor: pointer; transition: background 0.15s; margin-top: 8px; }
   .submit-btn:hover { background: var(--yellow-dark); }
   .submit-btn:disabled { background: #3a3a35; color: var(--gray); cursor: not-allowed; }
 
-  .success-banner { display: none; background: var(--green); color: #fff; padding: 16px 20px; margin-bottom: 20px; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; }
-  .success-banner strong { display: block; font-size: 16px; margin-bottom: 4px; }
-
-  /* ── REGISTER ── */
-  .register-wrap { padding: 20px 16px 40px; max-width: 1100px; margin: 0 auto; }
-  .register-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid var(--yellow); }
-  .register-header h2 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-  .reg-count { font-size: 12px; color: var(--gray); font-family: Arial, sans-serif; margin-top: 3px; }
-  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  .btn-sm { padding: 8px 14px; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.15s; }
-  .btn-yellow { background: var(--yellow); color: var(--black); }
-  .btn-yellow:hover { background: var(--yellow-dark); }
-  .btn-outline { background: transparent; color: var(--white); border: 1.5px solid #3a3a35; }
-  .btn-outline:hover { border-color: var(--yellow); color: var(--yellow); }
-  .btn-danger { background: var(--red); color: #fff; }
-  .btn-danger:hover { background: #a93226; }
-
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
-  .filter-select { background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white); font-family: Arial, sans-serif; font-size: 13px; padding: 7px 10px; outline: none; cursor: pointer; -webkit-appearance: none; }
-  .filter-select:focus { border-color: var(--yellow); }
-  .filter-label { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray); }
-
-  .table-scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; }
-  th { background: #2a2a26; color: var(--gray); font-family: 'Arial Narrow', Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 12px; text-align: left; border-bottom: 2px solid #3a3a35; white-space: nowrap; cursor: pointer; user-select: none; }
-  th:hover { color: var(--yellow); }
-  th .sort-arrow { margin-left: 4px; opacity: 0.4; }
-  th.sorted .sort-arrow { opacity: 1; color: var(--yellow); }
-  td { padding: 11px 12px; border-bottom: 1px solid #2a2a26; vertical-align: top; }
-  tr:hover td { background: #22221e; }
-
-  .sev-badge { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 700; font-family: 'Arial Narrow', Arial, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
-  .sev-Low      { background: rgba(39,174,96,0.2);  color: #5dbb8a; }
-  .sev-Medium   { background: rgba(230,126,34,0.2); color: #e89e52; }
-  .sev-High     { background: rgba(192,57,43,0.2);  color: #d45d4d; }
-  .sev-Critical { background: rgba(123,0,0,0.25);   color: #e06060; }
-
-  .status-select { background: transparent; border: 1px solid #3a3a35; color: var(--white); font-size: 12px; padding: 3px 6px; cursor: pointer; font-family: Arial, sans-serif; outline: none; }
-  .status-Open        { border-color: var(--red)    !important; color: #d45d4d !important; }
-  .status-In-Progress { border-color: var(--orange) !important; color: #e89e52 !important; }
-  .status-Closed      { border-color: var(--green)  !important; color: #5dbb8a !important; }
-
-  .empty-state { text-align: center; padding: 60px 20px; color: var(--gray); }
-  .empty-state .big { font-size: 48px; margin-bottom: 12px; }
-  .empty-state p { font-family: Arial, sans-serif; font-size: 14px; }
-  .ref-num { font-family: 'Courier New', monospace; font-size: 12px; color: var(--yellow); }
-  .desc-cell { max-width: 200px; }
-  .desc-text { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; }
-  .photo-desc-cell { max-width: 180px; font-size: 11px; color: #9a9a92; font-style: italic; }
-  .photo-desc-text { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; line-height: 1.4; }
-  .ai-tag { display: inline-block; font-size: 10px; font-family: 'Arial Narrow', Arial, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #5dbb8a; border: 1px solid rgba(93,187,138,0.3); padding: 1px 5px; margin-bottom: 4px; }
-
-  .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 24px; }
-  .stat-card { background: #2a2a26; padding: 14px 16px; border-left: 3px solid var(--yellow); }
-  .stat-num { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 28px; font-weight: 700; color: var(--yellow); }
-  .stat-label { font-family: Arial, sans-serif; font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
-
-  /* ── QR & SETTINGS ── */
-  .qr-wrap { max-width: 480px; margin: 0 auto; padding: 28px 16px 40px; }
-  .qr-wrap h2 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
-  .qr-wrap p.sub { font-family: Arial, sans-serif; font-size: 13px; color: var(--gray); margin-bottom: 24px; }
-  .qr-box { background: #fff; padding: 20px; display: inline-block; margin-bottom: 16px; }
-  .qr-url { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gray); word-break: break-all; margin-bottom: 20px; padding: 10px 12px; background: #2a2a26; border: 1px solid #3a3a35; }
-  .settings-section { margin-top: 28px; padding-top: 20px; border-top: 1px solid #3a3a35; }
-  .settings-section h3 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray); margin-bottom: 14px; }
-  .setting-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; gap: 12px; }
-  .setting-label { font-family: Arial, sans-serif; font-size: 13px; }
-  .setting-label small { display: block; color: var(--gray); font-size: 11px; margin-top: 2px; line-height: 1.5; }
-  .setting-input { flex: 1; max-width: 240px; background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white); font-family: Arial, sans-serif; font-size: 13px; padding: 7px 10px; outline: none; }
-  .setting-input:focus { border-color: var(--yellow); }
-  .notify-list { width: 100%; background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white); font-family: 'Courier New', monospace; font-size: 12px; padding: 10px 12px; min-height: 80px; outline: none; resize: vertical; }
-  .notify-list:focus { border-color: var(--yellow); }
-  .save-settings-btn { margin-top: 10px; }
-  .saved-msg { display: none; font-size: 12px; color: var(--green); font-family: Arial, sans-serif; margin-top: 6px; }
-
-  .privacy-callout { background: rgba(245,200,66,0.08); border: 1px solid rgba(245,200,66,0.25); padding: 12px 14px; margin-bottom: 20px; }
-  .privacy-callout p { font-family: Arial, sans-serif; font-size: 12px; color: #c8c8c0; line-height: 1.6; }
-  .privacy-callout strong { color: var(--yellow); }
+  .success-screen { display: none; text-align: center; padding: 60px 20px; }
+  .success-screen .tick { font-size: 64px; margin-bottom: 20px; }
+  .success-screen h2 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 26px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--yellow); margin-bottom: 12px; }
+  .success-screen p { font-family: Arial, sans-serif; font-size: 14px; color: var(--gray); line-height: 1.7; margin-bottom: 8px; }
+  .success-screen .ref { font-family: 'Courier New', monospace; font-size: 18px; color: var(--yellow); margin: 16px 0; display: block; }
+  .report-another { margin-top: 28px; padding: 12px 28px; background: transparent; border: 2px solid var(--yellow); color: var(--yellow); font-family: 'Arial Narrow', Arial, sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+  .report-another:hover { background: var(--yellow); color: var(--black); }
 </style>
 </head>
 <body>
 
-<nav>
-  <button class="nav-tab active" onclick="showView('report', this)">⚠ Report Hazard</button>
-  <button class="nav-tab" onclick="showView('register', this)">📋 Register</button>
-  <button class="nav-tab" onclick="showView('qr', this)">📲 QR & Settings</button>
-</nav>
+<div class="top-bar">
+  <span class="icon">⚠</span>
+  <span>Hazard Hotline — Anonymous Safety Reporting</span>
+</div>
 
-<!-- ══ REPORT FORM ══ -->
-<div id="view-report" class="view active">
-  <div class="report-wrap">
+<div class="report-wrap">
+  <div id="form-section">
     <div class="report-header">
       <div class="hazard-icon">⚠</div>
       <div>
-        <h1>Hazard Hotline</h1>
-        <p>Anonymous safety reporting — construction site</p>
+        <h1>Report a Hazard</h1>
+        <p id="project-name-display">Construction site safety reporting</p>
       </div>
     </div>
 
     <div class="anon-badge">🔒 Anonymous — no name required</div>
-
-    <div id="success-banner" class="success-banner">
-      <strong>✓ Hazard reported successfully</strong>
-      Your report has been logged and the safety team notified. Thank you for keeping the site safe.
-    </div>
 
     <form id="hazard-form" onsubmit="submitReport(event)">
       <div class="field">
@@ -249,9 +149,9 @@
       <div class="field">
         <label>Photo (optional)</label>
         <div class="privacy-callout">
-          <p><strong>Privacy guaranteed:</strong> Your photo is analysed instantly on this device by AI and converted to a written description. The photo itself is never uploaded, stored, or transmitted — only the text description is saved to the register.</p>
+          <p><strong>Privacy guaranteed:</strong> Your photo is analysed instantly on this device by AI and converted to a written description. The photo itself is never uploaded or stored — only the text description is saved.</p>
         </div>
-        <div class="photo-drop" id="photo-drop" onclick="document.getElementById('photo-input').click()">
+        <div class="photo-drop" onclick="document.getElementById('photo-input').click()">
           <div class="icon">📷</div>
           <p>Tap to attach a photo</p>
           <p class="privacy-note">🔒 Photo processed on-device only — never stored</p>
@@ -270,199 +170,57 @@
       <button type="submit" class="submit-btn" id="submit-btn">Submit Hazard Report</button>
     </form>
   </div>
-</div>
 
-<!-- ══ REGISTER ══ -->
-<div id="view-register" class="view">
-  <div class="register-wrap">
-    <div class="register-header">
-      <div>
-        <h2>Hazard Register</h2>
-        <div class="reg-count" id="reg-count">Loading…</div>
-      </div>
-      <div class="header-actions">
-        <button class="btn-sm btn-outline" onclick="exportCSV()">↓ Export CSV</button>
-        <button class="btn-sm btn-danger" onclick="clearAll()">Clear All</button>
-      </div>
-    </div>
-
-    <div class="stats-grid" id="stats-grid"></div>
-
-    <div class="filters">
-      <span class="filter-label">Filter:</span>
-      <select class="filter-select" id="filter-severity" onchange="renderRegister()">
-        <option value="">All severities</option>
-        <option>Low</option><option>Medium</option><option>High</option><option>Critical</option>
-      </select>
-      <select class="filter-select" id="filter-status" onchange="renderRegister()">
-        <option value="">All statuses</option>
-        <option>Open</option><option>In Progress</option><option>Closed</option>
-      </select>
-      <select class="filter-select" id="filter-type" onchange="renderRegister()">
-        <option value="">All types</option>
-      </select>
-    </div>
-
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th onclick="sortBy('ref')" id="th-ref">Ref <span class="sort-arrow">↕</span></th>
-            <th onclick="sortBy('timestamp')" id="th-timestamp" class="sorted">Date / Time <span class="sort-arrow">↓</span></th>
-            <th onclick="sortBy('type')" id="th-type">Type <span class="sort-arrow">↕</span></th>
-            <th onclick="sortBy('location')" id="th-location">Location <span class="sort-arrow">↕</span></th>
-            <th onclick="sortBy('severity')" id="th-severity">Severity <span class="sort-arrow">↕</span></th>
-            <th>Description</th>
-            <th>Photo analysis</th>
-            <th>Action taken</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="register-body"></tbody>
-      </table>
-    </div>
-    <div id="empty-state" class="empty-state" style="display:none">
-      <div class="big">📋</div>
-      <p>No hazards reported yet — or none match your filters.</p>
-    </div>
-  </div>
-</div>
-
-<!-- ══ QR & SETTINGS ══ -->
-<div id="view-qr" class="view">
-  <div class="qr-wrap">
-    <h2>QR Code & Settings</h2>
-    <p class="sub">Print and post this QR code around site. Workers scan it to open the anonymous report form on their phone.</p>
-    <div class="qr-box" id="qrcode"></div>
-    <div class="qr-url" id="qr-url-display"></div>
-    <button class="btn-sm btn-yellow" onclick="printQR()">🖨 Print QR Sheet</button>
-
-    <div class="settings-section">
-      <h3>Project details</h3>
-      <div class="setting-row">
-        <div class="setting-label">Project name<small>Shown on printed QR sheet and notifications</small></div>
-        <input class="setting-input" id="s-project" type="text" placeholder="e.g. CBUS2">
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h3>AI photo analysis</h3>
-      <div class="privacy-callout">
-        <p><strong>How it works:</strong> When a worker attaches a photo, it is sent directly from their browser to the Claude AI vision API. The API returns a written description. The photo is never stored — only the text enters the register. The API call is encrypted and no image data is retained by Anthropic after processing.</p>
-      </div>
-      <div class="setting-row">
-        <div class="setting-label">Anthropic API key<small>Required for photo analysis.<br>Get one at console.anthropic.com</small></div>
-        <input class="setting-input" id="s-apikey" type="password" placeholder="sk-ant-…">
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h3>Email notifications</h3>
-      <p style="font-family:Arial,sans-serif;font-size:12px;color:var(--gray);margin-bottom:14px;line-height:1.6">Uses EmailJS (free at emailjs.com). Leave blank to disable email alerts.</p>
-      <div class="setting-row">
-        <div class="setting-label">EmailJS Service ID</div>
-        <input class="setting-input" id="s-service" type="text" placeholder="service_xxxxxxx">
-      </div>
-      <div class="setting-row">
-        <div class="setting-label">EmailJS Template ID</div>
-        <input class="setting-input" id="s-template" type="text" placeholder="template_xxxxxxx">
-      </div>
-      <div class="setting-row">
-        <div class="setting-label">EmailJS Public Key</div>
-        <input class="setting-input" id="s-pubkey" type="text" placeholder="xxxxxxxxxxxxxx">
-      </div>
-      <div class="field">
-        <label>Notify these email addresses</label>
-        <textarea class="notify-list" id="s-emails" placeholder="one@email.com&#10;two@email.com"></textarea>
-      </div>
-      <button class="btn-sm btn-yellow save-settings-btn" onclick="saveSettings()">Save settings</button>
-      <div class="saved-msg" id="saved-msg">✓ Settings saved</div>
-    </div>
+  <!-- Success screen shown after submission -->
+  <div class="success-screen" id="success-screen">
+    <div class="tick">✅</div>
+    <h2>Hazard Reported</h2>
+    <p>Your report has been logged and the safety team has been notified.</p>
+    <span class="ref" id="success-ref"></span>
+    <p>Keep this reference number if you need to follow up.</p>
+    <p style="margin-top:16px">Thank you for helping keep the site safe.</p>
+    <button class="report-another" onclick="resetForm()">Report another hazard</button>
   </div>
 </div>
 
 <script>
-// ── STATE ──────────────────────────────────────────────────────────
-let reports = [];
-let sortCol = 'timestamp';
-let sortDir = -1;
 let pendingPhotoDescription = '';
 let photoAttached = false;
 
-const SEV_ORDER = { Low:1, Medium:2, High:3, Critical:4 };
-
-// ── STORAGE ────────────────────────────────────────────────────────
-async function loadReports() {
-  try { const r = await window.storage.get('hazard-reports'); if (r && r.value) reports = JSON.parse(r.value); } catch(e) { reports = []; }
-}
-async function saveReports() {
-  try { await window.storage.set('hazard-reports', JSON.stringify(reports)); } catch(e) {}
-}
-async function loadSettings() {
+// Load project name and API key from shared storage
+async function loadConfig() {
   try {
     const r = await window.storage.get('hazard-settings');
     if (r && r.value) {
       const s = JSON.parse(r.value);
-      document.getElementById('s-project').value  = s.project  || '';
-      document.getElementById('s-apikey').value   = s.apikey   || '';
-      document.getElementById('s-service').value  = s.service  || '';
-      document.getElementById('s-template').value = s.template || '';
-      document.getElementById('s-pubkey').value   = s.pubkey   || '';
-      document.getElementById('s-emails').value   = s.emails   || '';
+      if (s.project) document.getElementById('project-name-display').textContent = s.project;
+      window._apiKey = s.apikey || '';
+      window._ejService = s.service || '';
+      window._ejTemplate = s.template || '';
+      window._ejPubkey = s.pubkey || '';
+      window._ejEmails = (s.emails || '').split('\n').filter(e => e.includes('@'));
     }
   } catch(e) {}
 }
-async function saveSettings() {
-  const s = {
-    project:  document.getElementById('s-project').value.trim(),
-    apikey:   document.getElementById('s-apikey').value.trim(),
-    service:  document.getElementById('s-service').value.trim(),
-    template: document.getElementById('s-template').value.trim(),
-    pubkey:   document.getElementById('s-pubkey').value.trim(),
-    emails:   document.getElementById('s-emails').value.trim(),
-  };
-  try { await window.storage.set('hazard-settings', JSON.stringify(s)); } catch(e) {}
-  const msg = document.getElementById('saved-msg');
-  msg.style.display = 'block';
-  setTimeout(() => msg.style.display = 'none', 2500);
-}
-function getSettings() {
-  return {
-    project:  document.getElementById('s-project').value.trim(),
-    apikey:   document.getElementById('s-apikey').value.trim(),
-    service:  document.getElementById('s-service').value.trim(),
-    template: document.getElementById('s-template').value.trim(),
-    pubkey:   document.getElementById('s-pubkey').value.trim(),
-    emails:   document.getElementById('s-emails').value.trim().split('\n').filter(e => e.includes('@')),
-  };
+
+function genRef() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return 'HH-' + String(d.getFullYear()).slice(2) + pad(d.getMonth()+1) + pad(d.getDate()) + '-' + String(Math.floor(Math.random()*9000)+1000);
 }
 
-// ── NAV ────────────────────────────────────────────────────────────
-function showView(v, btn) {
-  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-  document.getElementById('view-'+v).classList.add('active');
-  if (btn) btn.classList.add('active');
-  if (v === 'register') renderRegister();
-  if (v === 'qr') renderQR();
-}
-
-// ── PHOTO HANDLING ─────────────────────────────────────────────────
 function handlePhoto(input) {
   if (!input.files || !input.files[0]) return;
-  const file = input.files[0];
   const reader = new FileReader();
   reader.onload = async (e) => {
     const dataUrl = e.target.result;
-    // Show preview
     document.getElementById('preview-img').src = dataUrl;
     document.getElementById('photo-preview-wrap').style.display = 'block';
     photoAttached = true;
     pendingPhotoDescription = '';
-    // Trigger AI analysis immediately
-    await analysePhotoWithAI(dataUrl);
+    await analysePhoto(dataUrl);
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(input.files[0]);
 }
 
 function clearPhoto() {
@@ -476,159 +234,106 @@ function clearPhoto() {
 
 function setAIStatus(state, label, body) {
   const el = document.getElementById('ai-status');
-  const labelEl = document.getElementById('ai-status-label');
-  const bodyEl = document.getElementById('ai-status-body');
   el.style.display = 'block';
   el.className = 'ai-status ' + state;
+  const labelEl = document.getElementById('ai-status-label');
   labelEl.className = 'ai-status-label ' + state;
   labelEl.textContent = label;
-  bodyEl.textContent = body;
+  document.getElementById('ai-status-body').textContent = body;
 }
 
-async function analysePhotoWithAI(dataUrl) {
-  const s = getSettings();
-  if (!s.apikey) {
-    setAIStatus('error', 'API key not configured', 'Add your Anthropic API key in the QR & Settings tab to enable photo analysis. The report can still be submitted without a photo description.');
+async function analysePhoto(dataUrl) {
+  if (!window._apiKey) {
+    setAIStatus('error', 'API key not configured', 'Photo analysis unavailable — report will still submit without it.');
     pendingPhotoDescription = '[Photo attached — AI analysis unavailable: no API key configured]';
     return;
   }
-
-  setAIStatus('processing', 'Analysing photo…', 'AI is reading the image. This takes a few seconds. The photo will not be stored.');
-
-  // Extract base64 data and media type
+  setAIStatus('processing', 'Analysing photo…', 'AI is reading the image. The photo will not be stored.');
   const matches = dataUrl.match(/^data:(.+);base64,(.+)$/);
-  if (!matches) {
-    setAIStatus('error', 'Could not read image', 'Please try a different photo.');
-    return;
-  }
-  const mediaType = matches[1];
-  const base64Data = matches[2];
-
+  if (!matches) { setAIStatus('error', 'Could not read image', 'Please try a different photo.'); return; }
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': s.apikey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-calls': 'true'
-      },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': window._apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-calls': 'true' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 400,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mediaType, data: base64Data }
-            },
-            {
-              type: 'text',
-              text: `You are analysing a photo submitted as part of an anonymous construction site hazard report. Provide a concise, factual description of what you observe that is relevant to safety. Cover: what the hazard appears to be, visible conditions, any relevant measurements or scale if apparent, and anything that indicates the severity or urgency. Write in plain English, 2-4 sentences maximum. Do not include any information that could identify the person who took the photo. If the image does not appear to show a hazard, describe what you see neutrally.`
-            }
-          ]
-        }]
+        model: 'claude-sonnet-4-6', max_tokens: 400,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: matches[1], data: matches[2] } },
+          { type: 'text', text: 'You are analysing a photo from an anonymous construction site hazard report. Provide a concise factual description of the safety hazard visible: what it is, conditions, any visible scale or severity indicators. 2-4 sentences. Do not include anything that could identify the photographer.' }
+        ]}]
       })
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'API error ' + response.status);
-    }
-
+    if (!response.ok) throw new Error('API error ' + response.status);
     const data = await response.json();
-    const description = data.content?.[0]?.text || '';
-
-    if (description) {
-      pendingPhotoDescription = description;
-      setAIStatus('done', '✓ Photo analysed — image will not be stored', description);
-    } else {
-      throw new Error('No description returned');
-    }
-  } catch (err) {
-    console.error('AI analysis error:', err);
+    const desc = data.content?.[0]?.text || '';
+    if (!desc) throw new Error('No description returned');
+    pendingPhotoDescription = desc;
+    setAIStatus('done', '✓ Photo analysed — image will not be stored', desc);
+  } catch(err) {
     pendingPhotoDescription = '[Photo attached — AI analysis failed: ' + err.message + ']';
-    setAIStatus('error', 'Analysis failed', 'The photo could not be analysed (' + err.message + '). The report will be submitted without a photo description. You can still describe the hazard in the description field above.');
+    setAIStatus('error', 'Analysis failed', 'Report will submit without photo description. Describe the hazard in the description field above.');
   }
-}
-
-// ── SUBMIT ─────────────────────────────────────────────────────────
-function genRef() {
-  const d = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  return 'HH-' + String(d.getFullYear()).slice(2) + pad(d.getMonth()+1) + pad(d.getDate()) + '-' + String(Math.floor(Math.random()*9000)+1000);
 }
 
 async function submitReport(e) {
   e.preventDefault();
   const form = e.target;
   const btn = document.getElementById('submit-btn');
-
-  // If photo is attached and still processing, wait briefly
   if (photoAttached && !pendingPhotoDescription) {
     btn.textContent = 'Waiting for photo analysis…';
     btn.disabled = true;
     await new Promise(res => setTimeout(res, 2000));
-    btn.disabled = false;
-    btn.textContent = 'Submit Hazard Report';
   }
-
   btn.disabled = true;
   btn.textContent = 'Submitting…';
 
+  const ref = genRef();
   const report = {
-    ref: genRef(),
-    timestamp: new Date().toISOString(),
-    type: form.type.value,
-    location: form.location.value.trim(),
-    severity: form.severity.value,
-    description: form.description.value.trim(),
-    action: form.action.value.trim(),
-    photoDescription: pendingPhotoDescription,
-    status: 'Open',
+    ref, timestamp: new Date().toISOString(),
+    type: form.type.value, location: form.location.value.trim(),
+    severity: form.severity.value, description: form.description.value.trim(),
+    action: form.action.value.trim(), photoDescription: pendingPhotoDescription, status: 'Open',
   };
 
-  reports.unshift(report);
-  await saveReports();
+  // Save to shared storage
+  try {
+    let reports = [];
+    const existing = await window.storage.get('hazard-reports');
+    if (existing && existing.value) reports = JSON.parse(existing.value);
+    reports.unshift(report);
+    await window.storage.set('hazard-reports', JSON.stringify(reports));
+  } catch(err) { console.warn('Storage error', err); }
+
   await sendNotification(report);
 
-  // Clear form — photo is already gone from memory after FileReader
-  form.reset();
-  clearPhoto();
-
-  const banner = document.getElementById('success-banner');
-  banner.style.display = 'block';
+  // Show success screen
+  document.getElementById('form-section').style.display = 'none';
+  document.getElementById('success-ref').textContent = ref;
+  document.getElementById('success-screen').style.display = 'block';
   window.scrollTo(0,0);
-  setTimeout(() => banner.style.display = 'none', 6000);
-
   btn.disabled = false;
   btn.textContent = 'Submit Hazard Report';
 }
 
-// ── EMAILJS ────────────────────────────────────────────────────────
+function resetForm() {
+  document.getElementById('hazard-form').reset();
+  clearPhoto();
+  document.getElementById('success-screen').style.display = 'none';
+  document.getElementById('form-section').style.display = 'block';
+  window.scrollTo(0,0);
+}
+
 function sendNotification(report) {
-  const s = getSettings();
-  if (!s.service || !s.template || !s.pubkey || !s.emails.length) return Promise.resolve();
+  if (!window._ejService || !window._ejTemplate || !window._ejPubkey || !window._ejEmails.length) return Promise.resolve();
   return new Promise(resolve => {
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
     script.onload = async () => {
-      emailjs.init(s.pubkey);
+      emailjs.init(window._ejPubkey);
       const fmt = new Intl.DateTimeFormat('en-GB', { dateStyle:'full', timeStyle:'short' });
-      const params = {
-        project: s.project || 'Construction Site',
-        ref: report.ref,
-        type: report.type,
-        location: report.location,
-        severity: report.severity,
-        description: report.description,
-        action: report.action || 'None stated',
-        photo_description: report.photoDescription || 'No photo submitted',
-        datetime: fmt.format(new Date(report.timestamp)),
-      };
-      for (const email of s.emails) {
-        try { await emailjs.send(s.service, s.template, {...params, to_email: email}); } catch(err) { console.warn('Email failed', err); }
+      const params = { ref: report.ref, type: report.type, location: report.location, severity: report.severity, description: report.description, action: report.action || 'None stated', photo_description: report.photoDescription || 'No photo submitted', datetime: fmt.format(new Date(report.timestamp)) };
+      for (const email of window._ejEmails) {
+        try { await emailjs.send(window._ejService, window._ejTemplate, {...params, to_email: email}); } catch(err) {}
       }
       resolve();
     };
@@ -637,185 +342,7 @@ function sendNotification(report) {
   });
 }
 
-// ── REGISTER ───────────────────────────────────────────────────────
-function sortBy(col) {
-  if (sortCol === col) sortDir *= -1;
-  else { sortCol = col; sortDir = -1; }
-  document.querySelectorAll('th').forEach(th => { th.classList.remove('sorted'); th.querySelector('.sort-arrow').textContent = '↕'; });
-  const th = document.getElementById('th-'+col);
-  if (th) { th.classList.add('sorted'); th.querySelector('.sort-arrow').textContent = sortDir === -1 ? '↓' : '↑'; }
-  renderRegister();
-}
-
-function getFiltered() {
-  const sv = document.getElementById('filter-severity').value;
-  const st = document.getElementById('filter-status').value;
-  const ty = document.getElementById('filter-type').value;
-  return reports.filter(r => (!sv || r.severity === sv) && (!st || r.status === st) && (!ty || r.type === ty));
-}
-
-function renderRegister() {
-  const typeFilter = document.getElementById('filter-type');
-  const curType = typeFilter.value;
-  const types = [...new Set(reports.map(r => r.type))].sort();
-  typeFilter.innerHTML = '<option value="">All types</option>' + types.map(t => `<option${t===curType?' selected':''}>${t}</option>`).join('');
-
-  const filtered = getFiltered();
-  const sorted = [...filtered].sort((a,b) => {
-    let va = a[sortCol], vb = b[sortCol];
-    if (sortCol === 'severity') { va = SEV_ORDER[va]||0; vb = SEV_ORDER[vb]||0; }
-    if (va < vb) return -1 * sortDir;
-    if (va > vb) return  1 * sortDir;
-    return 0;
-  });
-
-  const open = reports.filter(r => r.status === 'Open').length;
-  const crit = reports.filter(r => r.severity === 'Critical').length;
-  const inprog = reports.filter(r => r.status === 'In Progress').length;
-  document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card"><div class="stat-num">${reports.length}</div><div class="stat-label">Total reports</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:#d45d4d">${open}</div><div class="stat-label">Open</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:#e89e52">${inprog}</div><div class="stat-label">In progress</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:#e06060">${crit}</div><div class="stat-label">Critical</div></div>
-  `;
-  document.getElementById('reg-count').textContent = `${filtered.length} of ${reports.length} report${reports.length!==1?'s':''}`;
-
-  const tbody = document.getElementById('register-body');
-  const empty = document.getElementById('empty-state');
-  if (!sorted.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-
-  const fmt = new Intl.DateTimeFormat('en-GB', { day:'2-digit', month:'short', year:'2-digit', hour:'2-digit', minute:'2-digit' });
-  tbody.innerHTML = sorted.map(r => {
-    const realIdx = reports.indexOf(r);
-    const statusClass = 'status-' + r.status.replace(' ','-');
-    const photoCell = r.photoDescription
-      ? `<div class="photo-desc-cell"><span class="ai-tag">AI analysed</span><div class="photo-desc-text">${escHtml(r.photoDescription)}</div></div>`
-      : `<span style="color:#3a3a35;font-size:12px">—</span>`;
-    return `<tr>
-      <td><span class="ref-num">${r.ref}</span></td>
-      <td style="white-space:nowrap;font-size:12px">${fmt.format(new Date(r.timestamp))}</td>
-      <td style="white-space:nowrap;font-size:12px">${r.type}</td>
-      <td style="font-size:12px">${escHtml(r.location)}</td>
-      <td><span class="sev-badge sev-${r.severity}">${r.severity}</span></td>
-      <td class="desc-cell"><div class="desc-text">${escHtml(r.description)}</div></td>
-      <td>${photoCell}</td>
-      <td style="font-size:12px;color:var(--gray)">${r.action ? escHtml(r.action) : '—'}</td>
-      <td>
-        <select class="status-select ${statusClass}" onchange="updateStatus(${realIdx}, this)">
-          <option${r.status==='Open'?' selected':''}>Open</option>
-          <option${r.status==='In Progress'?' selected':''}>In Progress</option>
-          <option${r.status==='Closed'?' selected':''}>Closed</option>
-        </select>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-async function updateStatus(idx, sel) {
-  reports[idx].status = sel.value;
-  sel.className = 'status-select status-' + sel.value.replace(' ','-');
-  await saveReports();
-  renderRegister();
-}
-
-async function clearAll() {
-  if (!confirm('Delete all hazard reports? This cannot be undone.')) return;
-  reports = [];
-  await saveReports();
-  renderRegister();
-}
-
-function exportCSV() {
-  const filtered = getFiltered();
-  const rows = [['Ref','Date','Time','Type','Location','Severity','Description','Photo analysis','Action taken','Status']];
-  filtered.forEach(r => {
-    const d = new Date(r.timestamp);
-    rows.push([
-      r.ref,
-      d.toLocaleDateString('en-GB'),
-      d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
-      r.type, r.location, r.severity,
-      '"'+r.description.replace(/"/g,'""')+'"',
-      '"'+(r.photoDescription||'').replace(/"/g,'""')+'"',
-      '"'+(r.action||'').replace(/"/g,'""')+'"',
-      r.status
-    ]);
-  });
-  const csv = rows.map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'hazard-register-' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click();
-}
-
-// ── QR ─────────────────────────────────────────────────────────────
-function renderQR() {
-  const url = window.location.href.split('#')[0];
-  document.getElementById('qr-url-display').textContent = url;
-  const container = document.getElementById('qrcode');
-  container.innerHTML = '';
-  new QRCode(container, { text: url, width: 180, height: 180, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H });
-}
-
-function printQR() {
-  const url = window.location.href.split('#')[0];
-  const s = getSettings();
-  const project = s.project || 'Construction Site';
-  const qrHtml = document.getElementById('qrcode').innerHTML;
-  const win = window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>Hazard QR</title>
-  <style>
-    body { font-family: Arial Narrow, Arial, sans-serif; text-align: center; padding: 40px; background:#fff; color:#000; }
-    h1 { font-size: 32px; font-weight:900; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:4px; }
-    .sub { font-size: 14px; color:#555; margin-bottom:24px; }
-    .qr-wrap { display:inline-block; border: 6px solid #000; padding: 20px; margin-bottom: 20px; background:#fff; }
-    .hazard-stripe { background: #f5c842; color: #000; font-size: 18px; font-weight: 900; letter-spacing: 0.12em; text-transform:uppercase; padding: 12px 0; margin: 0 -40px 28px; }
-    .instr { font-size: 14px; line-height: 1.8; color: #333; margin-bottom: 20px; }
-    .anon { font-size: 12px; color: #555; border: 1px solid #ccc; display:inline-block; padding: 6px 16px; margin-top: 8px; line-height:1.6; }
-    .url { font-size: 11px; color: #999; font-family: monospace; margin-top: 20px; word-break:break-all; }
-  </style></head><body>
-  <div class="hazard-stripe">⚠ Report a Hazard ⚠</div>
-  <h1>Safety Hotline</h1>
-  <p class="sub">${project}</p>
-  <div class="qr-wrap">${qrHtml}</div>
-  <div class="instr">
-    1. Scan the QR code with your phone camera<br>
-    2. Complete the short form — takes under 2 minutes<br>
-    3. Attach a photo if you have one — it is never stored<br>
-    4. Your report goes straight to the safety team
-  </div>
-  <div class="anon">🔒 Completely anonymous — no name required<br>📷 Photos are analysed by AI and immediately discarded — never stored</div>
-  <div class="url">${url}</div>
-  </body></html>`);
-  win.document.close();
-  setTimeout(() => win.print(), 600);
-}
-
-// ── SEED DATA ──────────────────────────────────────────────────────
-async function seedIfEmpty() {
-  if (reports.length === 0) {
-    const now = Date.now();
-    reports = [
-      { ref:'HH-240315-7823', timestamp: new Date(now-86400000*2).toISOString(), type:'Working at height', location:'Level 4 east facade', severity:'High', description:'Scaffold board missing at L4 east corner — gap approx 600mm. Three workers in area.', action:'Area taped off pending inspection', photoDescription:'Image shows a scaffold platform with a visible gap in the decking boards measuring approximately 600mm. The gap is located at the edge of the platform with no visible edge protection. Workers visible in background at same level.', status:'In Progress' },
-      { ref:'HH-240314-4451', timestamp: new Date(now-86400000*3).toISOString(), type:'Slip / trip / fall hazard', location:'Main entrance hoarding gate', severity:'Medium', description:'Loose rebar off-cut left on pedestrian access route near hoarding gate.', action:'Removed rebar from walkway', photoDescription:'', status:'Closed' },
-      { ref:'HH-240313-9902', timestamp: new Date(now-86400000*4).toISOString(), type:'Poor housekeeping', location:'Ground floor welfare unit', severity:'Low', description:'Welfare area bin overflowing, floor wet near sink.', action:'', photoDescription:'Photo shows a welfare room interior. Waste bin is visibly overflowing with waste materials on the floor surrounding it. The area near the sink shows a wet floor with no wet floor signage present.', status:'Open' },
-    ];
-    await saveReports();
-  }
-}
-
-// ── INIT ───────────────────────────────────────────────────────────
-(async () => {
-  await loadReports();
-  await loadSettings();
-  await seedIfEmpty();
-  renderRegister();
-})();
+loadConfig();
 </script>
 </body>
 </html>
