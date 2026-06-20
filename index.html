@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hazard Hotline</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --black: #1a1a18; --white: #f5f4f0; --yellow: #f5c842; --yellow-dark: #d4a90e;
+    --red: #c0392b; --orange: #e67e22; --green: #27ae60; --gray: #6b6b65;
+    --low: #27ae60; --medium: #e67e22; --high: #c0392b; --critical: #7b0000;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, serif; background: var(--black); color: var(--white); min-height: 100vh; }
+
+  nav { display: flex; background: var(--yellow); border-bottom: 3px solid var(--black); }
+  .nav-tab { flex: 1; padding: 14px 10px; text-align: center; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; color: var(--black); border: none; background: transparent; transition: background 0.15s; }
+  .nav-tab:hover { background: rgba(0,0,0,0.1); }
+  .nav-tab.active { background: var(--black); color: var(--yellow); }
+  .nav-tab + .nav-tab { border-left: 2px solid var(--black); }
+  .nav-tab.locked { opacity: 0.45; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── REPORT FORM ── */
+  .report-wrap { max-width: 520px; margin: 0 auto; padding: 24px 16px 48px; }
+  .report-header { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid var(--yellow); }
+  .hazard-icon { width: 48px; height: 48px; background: var(--yellow); display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+  .report-header h1 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.2; }
+  .report-header p { font-size: 12px; color: var(--gray); margin-top: 3px; font-family: Arial, sans-serif; }
+  .anon-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(245,200,66,0.12); border: 1px solid rgba(245,200,66,0.3); padding: 6px 12px; font-size: 11px; font-family: Arial, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: var(--yellow); margin-bottom: 24px; }
+
+  .field { margin-bottom: 20px; }
+  .field label { display: block; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray); margin-bottom: 7px; }
+  .field label span.req { color: var(--yellow); margin-left: 2px; }
+  .field input, .field select, .field textarea { width: 100%; background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white); font-family: Arial, sans-serif; font-size: 15px; padding: 11px 13px; outline: none; transition: border-color 0.15s; border-radius: 0; -webkit-appearance: none; appearance: none; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--yellow); }
+  .field textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
+  .field select option { background: #2a2a26; }
+
+  .severity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sev-label { display: block; cursor: pointer; }
+  .sev-label input { display: none; }
+  .sev-pill { display: block; padding: 10px 8px; text-align: center; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: 2px solid #3a3a35; color: var(--gray); background: #2a2a26; transition: all 0.15s; cursor: pointer; }
+  .sev-label[data-sev="Low"]      .sev-pill { --c: var(--low); }
+  .sev-label[data-sev="Medium"]   .sev-pill { --c: var(--medium); }
+  .sev-label[data-sev="High"]     .sev-pill { --c: var(--high); }
+  .sev-label[data-sev="Critical"] .sev-pill { --c: var(--critical); }
+  .sev-label input:checked + .sev-pill { background: var(--c); color: #fff; border-color: var(--c); }
+
+  .photo-drop { border: 2px dashed #3a3a35; padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.15s; }
+  .photo-drop:hover { border-color: var(--yellow); }
+  .photo-drop .icon { font-size: 28px; }
+  .photo-drop p { font-size: 13px; color: var(--gray); font-family: Arial, sans-serif; margin-top: 4px; }
+  .photo-drop .privacy-note { font-size: 11px; color: rgba(245,200,66,0.7); margin-top: 6px; }
+  #photo-input { display: none; }
+  #photo-preview-wrap { display: none; margin-top: 10px; }
+  #photo-preview-wrap img { max-width: 100%; max-height: 160px; object-fit: cover; display: block; }
+  .photo-clear { margin-top: 8px; font-size: 12px; font-family: Arial, sans-serif; color: var(--gray); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
+  .photo-clear:hover { color: var(--white); }
+
+  .ai-status { margin-top: 10px; padding: 10px 12px; background: #2a2a26; border-left: 3px solid var(--yellow); font-family: Arial, sans-serif; font-size: 12px; display: none; }
+  .ai-status.processing { border-color: var(--orange); }
+  .ai-status.done       { border-color: var(--green); }
+  .ai-status.error      { border-color: var(--red); }
+  .ai-status-label { font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 11px; margin-bottom: 4px; }
+  .ai-status-label.processing { color: var(--orange); }
+  .ai-status-label.done       { color: #5dbb8a; }
+  .ai-status-label.error      { color: #d45d4d; }
+  .ai-status-body { color: #b0b0a8; line-height: 1.5; }
+
+  .privacy-callout { background: rgba(245,200,66,0.08); border: 1px solid rgba(245,200,66,0.25); padding: 12px 14px; margin-bottom: 12px; }
+  .privacy-callout p { font-family: Arial, sans-serif; font-size: 12px; color: #c8c8c0; line-height: 1.6; }
+  .privacy-callout strong { color: var(--yellow); }
+
+  .submit-btn { width: 100%; padding: 16px; background: var(--yellow); color: var(--black); font-family: 'Arial Narrow', Arial, sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: none; cursor: pointer; transition: background 0.15s; margin-top: 8px; }
+  .submit-btn:hover { background: var(--yellow-dark); }
+  .submit-btn:disabled { background: #3a3a35; color: var(--gray); cursor: not-allowed; }
+
+  .success-screen { display: none; text-align: center; padding: 60px 20px; }
+  .success-screen .tick { font-size: 64px; margin-bottom: 20px; }
+  .success-screen h2 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 26px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--yellow); margin-bottom: 12px; }
+  .success-screen p { font-family: Arial, sans-serif; font-size: 14px; color: var(--gray); line-height: 1.7; margin-bottom: 8px; }
+  .success-screen .ref { font-family: 'Courier New', monospace; font-size: 18px; color: var(--yellow); margin: 16px 0; display: block; }
+  .report-another { margin-top: 28px; padding: 12px 28px; background: transparent; border: 2px solid var(--yellow); color: var(--yellow); font-family: 'Arial Narrow', Arial, sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+  .report-another:hover { background: var(--yellow); color: var(--black); }
+
+  /* ── PASSWORD GATE ── */
+  .pw-gate { max-width: 360px; margin: 80px auto; padding: 32px 28px; background: #222220; border: 1px solid #3a3a35; text-align: center; }
+  .pw-gate h2 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .pw-gate p { font-family: Arial, sans-serif; font-size: 13px; color: var(--gray); margin-bottom: 24px; }
+  .pw-input { width: 100%; background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white); font-family: Arial, sans-serif; font-size: 16px; padding: 11px 13px; outline: none; text-align: center; letter-spacing: 0.15em; margin-bottom: 12px; }
+  .pw-input:focus { border-color: var(--yellow); }
+  .pw-btn { width: 100%; padding: 12px; background: var(--yellow); color: var(--black); font-family: 'Arial Narrow', Arial, sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: none; cursor: pointer; }
+  .pw-btn:hover { background: var(--yellow-dark); }
+  .pw-error { font-family: Arial, sans-serif; font-size: 12px; color: #d45d4d; margin-top: 8px; display: none; }
+  .pw-lock { font-size: 40px; margin-bottom: 16px; }
+
+  /* ── REGISTER ── */
+  .register-wrap { padding: 20px 16px 40px; max-width: 1200px; margin: 0 auto; }
+  .register-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid var(--yellow); }
+  .register-header h2 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .reg-count { font-size: 12px; color: var(--gray); font-family: Arial, sans-serif; margin-top: 3px; }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-sm { padding: 8px 14px; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.15s; }
+  .btn-yellow  { background: var(--yellow); color: var(--black); }
+  .btn-yellow:hover { background: var(--yellow-dark); }
+  .btn-outline { background: transparent; color: var(--white); border: 1.5px solid #3a3a35; }
+  .btn-outline:hover { border-color: var(--yellow); color: var(--yellow); }
+  .btn-danger  { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #a93226; }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .filter-select { background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white); font-family: Arial, sans-serif; font-size: 13px; padding: 7px 10px; outline: none; cursor: pointer; -webkit-appearance: none; }
+  .filter-select:focus { border-color: var(--yellow); }
+  .filter-label { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray); }
+
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; }
+  th { background: #2a2a26; color: var(--gray); font-family: 'Arial Narrow', Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 12px; text-align: left; border-bottom: 2px solid #3a3a35; white-space: nowrap; cursor: pointer; user-select: none; }
+  th:hover { color: var(--yellow); }
+  th .sort-arrow { margin-left: 4px; opacity: 0.4; }
+  th.sorted .sort-arrow { opacity: 1; color: var(--yellow); }
+  td { padding: 11px 12px; border-bottom: 1px solid #2a2a26; vertical-align: top; }
+  tr:hover td { background: #22221e; }
+
+  .sev-badge { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 700; font-family: 'Arial Narrow', Arial, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+  .sev-Low      { background: rgba(39,174,96,0.2);  color: #5dbb8a; }
+  .sev-Medium   { background: rgba(230,126,34,0.2); color: #e89e52; }
+  .sev-High     { background: rgba(192,57,43,0.2);  color: #d45d4d; }
+  .sev-Critical { background: rgba(123,0,0,0.25);   color: #e06060; }
+
+  .status-select { background: transparent; border: 1px solid #3a3a35; color: var(--white); font-size: 12px; padding: 3px 6px; cursor: pointer; font-family: Arial, sans-serif; outline: none; }
+  .status-Open        { border-color: var(--red)    !important; color: #d45d4d !important; }
+  .status-In-Progress { border-color: var(--orange) !important; color: #e89e52 !important; }
+  .status-Closed      { border-color: var(--green)  !important; color: #5dbb8a !important; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--gray); }
+  .empty-state .big { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-family: Arial, sans-serif; font-size: 14px; }
+  .ref-num { font-family: 'Courier New', monospace; font-size: 12px; color: var(--yellow); white-space: nowrap; }
+  .desc-cell { max-width: 200px; }
+  .desc-text { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; }
+  .photo-desc-cell { max-width: 200px; font-size: 11px; color: #9a9a92; font-style: italic; }
+  .photo-desc-text { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; line-height: 1.4; }
+  .ai-tag { display: inline-block; font-size: 10px; font-family: 'Arial Narrow', Arial, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #5dbb8a; border: 1px solid rgba(93,187,138,0.3); padding: 1px 5px; margin-bottom: 4px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 24px; }
+  .stat-card { background: #2a2a26; padding: 14px 16px; border-left: 3px solid var(--yellow); }
+  .stat-num { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 28px; font-weight: 700; color: var(--yellow); }
+  .stat-label { font-family: Arial, sans-serif; font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+  /* connection status */
+  .conn-status { font-family: Arial, sans-serif; font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 16px; }
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .conn-ok .conn-dot { background: var(--green); }
+  .conn-err .conn-dot { background: var(--red); }
+  .conn-wait .conn-dot { background: var(--orange); }
+
+  /* ── SETTINGS ── */
+  .settings-wrap { max-width: 540px; margin: 0 auto; padding: 28px 16px 40px; }
+  .settings-wrap h2 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+  .settings-wrap p.sub { font-family: Arial, sans-serif; font-size: 13px; color: var(--gray); margin-bottom: 24px; }
+  .qr-box { background: #fff; padding: 16px; display: inline-block; margin-bottom: 12px; }
+  .qr-url { font-family: 'Courier New', monospace; font-size: 11px; color: var(--gray); word-break: break-all; margin-bottom: 12px; padding: 10px 12px; background: #2a2a26; border: 1px solid #3a3a35; }
+  .settings-section { margin-top: 28px; padding-top: 20px; border-top: 1px solid #3a3a35; }
+  .settings-section h3 { font-family: 'Arial Narrow', Arial, sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray); margin-bottom: 14px; }
+  .setting-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; gap: 12px; }
+  .setting-label { font-family: Arial, sans-serif; font-size: 13px; flex: 1; }
+  .setting-label small { display: block; color: var(--gray); font-size: 11px; margin-top: 2px; line-height: 1.5; }
+  .setting-input { flex: 1; max-width: 280px; background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white); font-family: Arial, sans-serif; font-size: 13px; padding: 7px 10px; outline: none; }
+  .setting-input:focus { border-color: var(--yellow); }
+  .notify-list { width: 100%; background: #2a2a26; border: 1.5px solid #3a3a35; color: var(--white); font-family: 'Courier New', monospace; font-size: 12px; padding: 10px 12px; min-height: 80px; outline: none; resize: vertical; }
+  .notify-list:focus { border-color: var(--yellow); }
+  .saved-msg { display: none; font-size: 12px; color: var(--green); font-family: Arial, sans-serif; margin-top: 6px; }
+  .test-conn-btn { margin-top: 8px; }
+  .conn-test-result { font-family: Arial, sans-serif; font-size: 12px; margin-top: 8px; display: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <button class="nav-tab active" id="tab-report"   onclick="showView('report',this)">⚠ Report Hazard</button>
+  <button class="nav-tab locked"  id="tab-register" onclick="requestAdmin('register',this)">📋 Register 🔒</button>
+  <button class="nav-tab locked"  id="tab-settings" onclick="requestAdmin('settings',this)">⚙ Settings 🔒</button>
+</nav>
+
+<!-- ══ REPORT FORM ══ -->
+<div id="view-report" class="view active">
+  <div class="report-wrap">
+    <div id="form-section">
+      <div class="report-header">
+        <div class="hazard-icon">⚠</div>
+        <div>
+          <h1>Report a Hazard</h1>
+          <p id="project-name-display">Anonymous safety reporting</p>
+        </div>
+      </div>
+      <div class="anon-badge">🔒 Anonymous — no name required</div>
+
+      <form id="hazard-form" onsubmit="submitReport(event)">
+        <div class="field">
+          <label>Hazard type <span class="req">*</span></label>
+          <select name="type" required>
+            <option value="">— Select type —</option>
+            <option>Working at height</option>
+            <option>Slip / trip / fall hazard</option>
+            <option>Electrical</option>
+            <option>Structural / collapse risk</option>
+            <option>Plant & machinery</option>
+            <option>Fire / explosion risk</option>
+            <option>Manual handling</option>
+            <option>Hazardous substances (COSHH)</option>
+            <option>Excavation / groundworks</option>
+            <option>Confined space</option>
+            <option>Poor housekeeping</option>
+            <option>Missing / inadequate PPE</option>
+            <option>Near miss</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Location on site <span class="req">*</span></label>
+          <input type="text" name="location" placeholder="e.g. Level 3 stairwell, Grid B4, North scaffold" required maxlength="120">
+        </div>
+        <div class="field">
+          <label>Severity <span class="req">*</span></label>
+          <div class="severity-grid">
+            <label class="sev-label" data-sev="Low"><input type="radio" name="severity" value="Low" required><span class="sev-pill">Low</span></label>
+            <label class="sev-label" data-sev="Medium"><input type="radio" name="severity" value="Medium"><span class="sev-pill">Medium</span></label>
+            <label class="sev-label" data-sev="High"><input type="radio" name="severity" value="High"><span class="sev-pill">High</span></label>
+            <label class="sev-label" data-sev="Critical"><input type="radio" name="severity" value="Critical"><span class="sev-pill">Critical</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Description <span class="req">*</span></label>
+          <textarea name="description" placeholder="Describe the hazard — what did you see, where exactly, how many people affected?" required maxlength="1000"></textarea>
+        </div>
+        <div class="field">
+          <label>Immediate action taken (if any)</label>
+          <input type="text" name="action" placeholder="e.g. Area cordoned off, supervisor informed" maxlength="300">
+        </div>
+        <div class="field">
+          <label>Photo (optional)</label>
+          <div class="privacy-callout">
+            <p><strong>Privacy:</strong> Your photo is analysed by AI to generate a written description for the register. No name, email or phone number is linked to your submission.</p>
+          </div>
+          <div class="photo-drop" onclick="document.getElementById('photo-input').click()">
+            <div class="icon">📷</div>
+            <p>Tap to attach a photo</p>
+            <p class="privacy-note">🔒 Not linked to your identity</p>
+          </div>
+          <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+          <div id="photo-preview-wrap">
+            <img id="preview-img" src="" alt="Preview">
+            <button type="button" class="photo-clear" onclick="clearPhoto()">✕ Remove photo</button>
+          </div>
+          <div class="ai-status" id="ai-status">
+            <div class="ai-status-label" id="ai-status-label"></div>
+            <div class="ai-status-body"  id="ai-status-body"></div>
+          </div>
+        </div>
+        <button type="submit" class="submit-btn" id="submit-btn">Submit Hazard Report</button>
+      </form>
+    </div>
+
+    <div class="success-screen" id="success-screen">
+      <div class="tick">✅</div>
+      <h2>Hazard Reported</h2>
+      <p>Your report has been logged and the safety team has been notified.</p>
+      <span class="ref" id="success-ref"></span>
+      <p>Keep this reference number if you need to follow up.</p>
+      <p style="margin-top:16px">Thank you for helping keep the site safe.</p>
+      <button class="report-another" onclick="resetForm()">Report another hazard</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PASSWORD GATE ══ -->
+<div id="view-pw" class="view">
+  <div class="pw-gate">
+    <div class="pw-lock">🔒</div>
+    <h2>Admin access</h2>
+    <p>Enter the admin password to continue.</p>
+    <input type="password" class="pw-input" id="pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPassword()">
+    <button class="pw-btn" onclick="checkPassword()">Unlock</button>
+    <div class="pw-error" id="pw-error">Incorrect password — try again.</div>
+  </div>
+</div>
+
+<!-- ══ REGISTER ══ -->
+<div id="view-register" class="view">
+  <div class="register-wrap">
+    <div class="register-header">
+      <div>
+        <h2>Hazard Register</h2>
+        <div class="reg-count" id="reg-count"></div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-sm btn-outline" onclick="loadReports()">↻ Refresh</button>
+        <button class="btn-sm btn-outline" onclick="exportCSV()">↓ Export CSV</button>
+        <button class="btn-sm btn-outline" onclick="lockAdmin()">🔒 Lock</button>
+      </div>
+    </div>
+    <div id="conn-status-reg" class="conn-status conn-wait"><div class="conn-dot"></div><span>Connecting to database…</span></div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="filters">
+      <span class="filter-label">Filter:</span>
+      <select class="filter-select" id="filter-severity" onchange="renderRegister()"><option value="">All severities</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
+      <select class="filter-select" id="filter-status"   onchange="renderRegister()"><option value="">All statuses</option><option>Open</option><option>In Progress</option><option>Closed</option></select>
+      <select class="filter-select" id="filter-type"     onchange="renderRegister()"><option value="">All types</option></select>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th onclick="sortBy('ref')"       id="th-ref">Ref <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('timestamp')" id="th-timestamp" class="sorted">Date / Time <span class="sort-arrow">↓</span></th>
+          <th onclick="sortBy('type')"      id="th-type">Type <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('location')"  id="th-location">Location <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('severity')"  id="th-severity">Severity <span class="sort-arrow">↕</span></th>
+          <th>Description</th>
+          <th>Photo analysis</th>
+          <th>Action taken</th>
+          <th>Status</th>
+        </tr></thead>
+        <tbody id="register-body"></tbody>
+      </table>
+    </div>
+    <div id="empty-state" class="empty-state" style="display:none">
+      <div class="big">📋</div><p>No hazards reported yet.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div id="view-settings" class="view">
+  <div class="settings-wrap">
+    <h2>Settings & QR Code</h2>
+    <p class="sub">Configure the system. Credentials are saved to this device only.</p>
+
+    <div class="settings-section">
+      <h3>Supabase database</h3>
+      <div class="privacy-callout" style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.25);padding:12px 14px;margin-bottom:14px;">
+        <p style="font-family:Arial,sans-serif;font-size:12px;color:#c8c8c0;line-height:1.6">
+          <strong style="color:var(--yellow)">Setup:</strong> Create a free account at supabase.com. Create a new project, then run the SQL below in the Supabase SQL editor to create the reports table. Then paste your Project URL and anon key here.
+        </p>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Project URL<small>From Supabase → Settings → API</small></div>
+        <input class="setting-input" id="s-url" type="url" placeholder="https://xxxx.supabase.co">
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Anon (public) key<small>From Supabase → Settings → API</small></div>
+        <input class="setting-input" id="s-anonkey" type="password" placeholder="eyJh…">
+      </div>
+      <button class="btn-sm btn-outline test-conn-btn" onclick="testConnection()">Test connection</button>
+      <div class="conn-test-result" id="conn-test-result"></div>
+      <details style="margin-top:16px">
+        <summary style="font-family:'Arial Narrow',Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray);cursor:pointer">SQL to create table ▾</summary>
+        <pre style="margin-top:10px;padding:12px;background:#2a2a26;font-family:'Courier New',monospace;font-size:11px;color:#b0b0a8;overflow-x:auto;line-height:1.6">CREATE TABLE hazard_reports (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  ref         text NOT NULL,
+  timestamp   timestamptz DEFAULT now(),
+  type        text,
+  location    text,
+  severity    text,
+  description text,
+  action      text,
+  photo_desc  text,
+  photo_url   text,
+  status      text DEFAULT 'Open'
+);
+
+-- Allow anonymous inserts (public submissions)
+ALTER TABLE hazard_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can insert"
+  ON hazard_reports FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Anon key can read"
+  ON hazard_reports FOR SELECT
+  USING (true);
+
+CREATE POLICY "Anon key can update status"
+  ON hazard_reports FOR UPDATE
+  USING (true);</pre>
+      </details>
+    </div>
+
+    <div class="settings-section">
+      <h3>Admin password</h3>
+      <div class="setting-row">
+        <div class="setting-label">New password<small>Change from default (hazard2024) immediately</small></div>
+        <input class="setting-input" id="s-password" type="password" placeholder="Enter new password">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>QR code</h3>
+      <p style="font-family:Arial,sans-serif;font-size:12px;color:var(--gray);margin-bottom:14px;line-height:1.6">Paste your GitHub Pages URL to generate the site poster QR code.</p>
+      <div class="setting-row">
+        <div class="setting-label">Hosted URL<small>Your GitHub Pages address</small></div>
+        <input class="setting-input" id="s-hostedurl" type="url" placeholder="https://username.github.io/hazard-hotline/" oninput="renderQR()">
+      </div>
+      <div class="qr-box" id="qrcode"></div><br>
+      <div class="qr-url" id="qr-url-display">Enter URL above to generate QR</div>
+      <button class="btn-sm btn-yellow" onclick="printQR()">🖨 Print QR Sheet</button>
+    </div>
+
+    <div class="settings-section">
+      <h3>Project details</h3>
+      <div class="setting-row">
+        <div class="setting-label">Project name<small>Shown on the report form and QR poster</small></div>
+        <input class="setting-input" id="s-project" type="text" placeholder="e.g. CBUS2 — Centenary Bridge">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>AI photo analysis</h3>
+      <div class="privacy-callout" style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.25);padding:12px 14px;margin-bottom:14px;">
+        <p style="font-family:Arial,sans-serif;font-size:12px;color:#c8c8c0;line-height:1.6">
+          <strong style="color:var(--yellow)">How it works:</strong> The photo is sent from the worker's browser to the Claude AI vision API, converted to a written description, then discarded. Only the text description is saved to the register.
+        </p>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Anthropic API key<small>Get one at console.anthropic.com</small></div>
+        <input class="setting-input" id="s-apikey" type="password" placeholder="sk-ant-…">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Email notifications</h3>
+      <p style="font-family:Arial,sans-serif;font-size:12px;color:var(--gray);margin-bottom:14px;line-height:1.6">Uses EmailJS (free at emailjs.com). Leave blank to disable.</p>
+      <div class="setting-row">
+        <div class="setting-label">Service ID</div>
+        <input class="setting-input" id="s-service"  type="text" placeholder="service_xxxxxxx">
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Template ID</div>
+        <input class="setting-input" id="s-template" type="text" placeholder="template_xxxxxxx">
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Public Key</div>
+        <input class="setting-input" id="s-pubkey"   type="text" placeholder="xxxxxxxxxxxxxx">
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label style="display:block;font-family:'Arial Narrow',Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);margin-bottom:7px">Notify these email addresses</label>
+        <textarea class="notify-list" id="s-emails" placeholder="one@email.com&#10;two@email.com"></textarea>
+      </div>
+      <button class="btn-sm btn-yellow" onclick="saveSettings()">Save all settings</button>
+      <div class="saved-msg" id="saved-msg">✓ Settings saved</div>
+      <div style="margin-top:16px">
+        <button class="btn-sm btn-outline" onclick="lockAdmin()">🔒 Lock admin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── GLOBALS ────────────────────────────────────────────────────────
+let reports = [];
+let sortCol = 'timestamp', sortDir = -1;
+let adminUnlocked = false;
+let pendingAdminView = '';
+let pendingPhotoDescription = '';
+let pendingPhotoDataUrl = '';
+let photoAttached = false;
+const DEFAULT_PASSWORD = 'hazard2024';
+const SEV_ORDER = { Low:1, Medium:2, High:3, Critical:4 };
+
+// cfg populated from settings
+let cfg = {
+  password: DEFAULT_PASSWORD,
+  supabaseUrl: 'https://waxelyyfpvgblzafounn.supabase.co', anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndheGVseXlmcHZnYmx6YWZvdW5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4ODY4NTMsImV4cCI6MjA5NzQ2Mjg1M30.lGLP8R-ryxTeIRGTOEOSB_tHErq7-fKLWFrWoxoOei0',
+  apiKey: '', project: '',
+  ejService: '', ejTemplate: '', ejPubkey: '', ejEmails: [],
+  hostedUrl: ''
+};
+
+// ── SUPABASE HELPERS ───────────────────────────────────────────────
+function sbHeaders() {
+  return { 'Content-Type': 'application/json', 'apikey': cfg.anonKey, 'Authorization': 'Bearer ' + cfg.anonKey };
+}
+
+async function sbSelect() {
+  if (!cfg.supabaseUrl || !cfg.anonKey) return null;
+  try {
+    const r = await fetch(cfg.supabaseUrl + '/rest/v1/hazard_reports?select=*&order=timestamp.desc', { headers: sbHeaders() });
+    if (!r.ok) throw new Error(await r.text());
+    return await r.json();
+  } catch(e) { console.error('sbSelect', e); return null; }
+}
+
+async function sbInsert(report) {
+  if (!cfg.supabaseUrl || !cfg.anonKey) return false;
+  try {
+    const r = await fetch(cfg.supabaseUrl + '/rest/v1/hazard_reports', {
+      method: 'POST',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        ref: report.ref, timestamp: report.timestamp, type: report.type,
+        location: report.location, severity: report.severity,
+        description: report.description, action: report.action,
+        photo_desc: report.photoDescription, photo_url: report.photoUrl || '', status: 'Open'
+      })
+    });
+    return r.ok || r.status === 201;
+  } catch(e) { console.error('sbInsert', e); return false; }
+}
+
+async function sbUpdateStatus(id, status) {
+  if (!cfg.supabaseUrl || !cfg.anonKey) return;
+  try {
+    await fetch(cfg.supabaseUrl + '/rest/v1/hazard_reports?id=eq.' + id, {
+      method: 'PATCH',
+      headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status })
+    });
+  } catch(e) { console.error('sbUpdate', e); }
+}
+
+
+async function sbUploadPhoto(dataUrl, ref) {
+  if (!cfg.supabaseUrl || !cfg.anonKey) return null;
+  try {
+    const m = dataUrl.match(/^data:(.+);base64,(.+)$/);
+    if (!m) return null;
+    const mediaType = m[1];
+    const ext = mediaType.includes("png") ? "png" : "jpg";
+    const filename = ref + "-" + Date.now() + "." + ext;
+    const byteStr = atob(m[2]);
+    const arr = new Uint8Array(byteStr.length);
+    for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+    const blob = new Blob([arr], { type: mediaType });
+    const r = await fetch(cfg.supabaseUrl + "/storage/v1/object/hazard-photos/" + filename, {
+      method: "POST",
+      headers: { "apikey": cfg.anonKey, "Authorization": "Bearer " + cfg.anonKey, "Content-Type": mediaType, "x-upsert": "true" },
+      body: blob
+    });
+    if (!r.ok) { console.warn("Photo upload failed", await r.text()); return null; }
+    return cfg.supabaseUrl + "/storage/v1/object/public/hazard-photos/" + filename;
+  } catch(e) { console.error("sbUploadPhoto", e); return null; }
+}
+
+async function testConnection() {
+  const url  = document.getElementById('s-url').value.trim();
+  const key  = document.getElementById('s-anonkey').value.trim();
+  const res  = document.getElementById('conn-test-result');
+  res.style.display = 'block'; res.style.color = 'var(--orange)';
+  res.textContent = 'Testing…';
+  if (!url || !key) { res.style.color='var(--red)'; res.textContent='Enter URL and key first.'; return; }
+  try {
+    const r = await fetch(url + '/rest/v1/hazard_reports?select=id&limit=1', {
+      headers: {
+        'apikey': key,
+        'Authorization': 'Bearer ' + key,
+        'Accept': 'application/json',
+        'Range': '0-0'
+      }
+    });
+    // 200 = rows returned, 206 = partial, 416 = range not satisfiable (table exists but empty) — all mean connected
+    if (r.ok || r.status === 206 || r.status === 416) {
+      res.style.color = 'var(--green)'; res.textContent = '✓ Connected successfully — database is reachable.';
+    } else {
+      const txt = await r.text();
+      res.style.color = 'var(--red)'; res.textContent = '✗ Error ' + r.status + ': ' + txt.slice(0,200);
+    }
+  } catch(e) {
+    res.style.color = 'var(--red)'; res.textContent = '✗ Could not reach Supabase: ' + e.message;
+  }
+}
+
+// ── SETTINGS PERSISTENCE (local) ──────────────────────────────────
+async function loadSettings() {
+  try {
+    const r = await window.storage.get('hazard-settings');
+    if (r && r.value) {
+      const s = JSON.parse(r.value);
+      cfg.password   = s.password   || DEFAULT_PASSWORD;
+      cfg.supabaseUrl= s.supabaseUrl || '';
+      cfg.anonKey    = s.anonKey    || '';
+      cfg.apiKey     = s.apiKey     || '';
+      cfg.project    = s.project    || '';
+      cfg.ejService  = s.ejService  || '';
+      cfg.ejTemplate = s.ejTemplate || '';
+      cfg.ejPubkey   = s.ejPubkey   || '';
+      cfg.ejEmails   = (s.ejEmails||'').split('\n').filter(e=>e.includes('@'));
+      cfg.hostedUrl  = s.hostedUrl  || '';
+      if (cfg.project) document.getElementById('project-name-display').textContent = cfg.project;
+      // populate settings fields
+      document.getElementById('s-url').value       = cfg.supabaseUrl;
+      document.getElementById('s-anonkey').value   = cfg.anonKey;
+      document.getElementById('s-apikey').value    = cfg.apiKey;
+      document.getElementById('s-project').value   = cfg.project;
+      document.getElementById('s-service').value   = cfg.ejService;
+      document.getElementById('s-template').value  = cfg.ejTemplate;
+      document.getElementById('s-pubkey').value    = cfg.ejPubkey;
+      document.getElementById('s-emails').value    = s.ejEmails || '';
+      document.getElementById('s-hostedurl').value = cfg.hostedUrl;
+    }
+  } catch(e) {}
+}
+
+async function saveSettings() {
+  const newPw = document.getElementById('s-password').value.trim();
+  cfg.password   = newPw || cfg.password;
+  cfg.supabaseUrl= document.getElementById('s-url').value.trim();
+  cfg.anonKey    = document.getElementById('s-anonkey').value.trim();
+  cfg.apiKey     = document.getElementById('s-apikey').value.trim();
+  cfg.project    = document.getElementById('s-project').value.trim();
+  cfg.ejService  = document.getElementById('s-service').value.trim();
+  cfg.ejTemplate = document.getElementById('s-template').value.trim();
+  cfg.ejPubkey   = document.getElementById('s-pubkey').value.trim();
+  const emailsRaw= document.getElementById('s-emails').value.trim();
+  cfg.ejEmails   = emailsRaw.split('\n').filter(e=>e.includes('@'));
+  cfg.hostedUrl  = document.getElementById('s-hostedurl').value.trim();
+  if (cfg.project) document.getElementById('project-name-display').textContent = cfg.project;
+  try {
+    await window.storage.set('hazard-settings', JSON.stringify({ ...cfg, ejEmails: emailsRaw }));
+  } catch(e) {}
+  const msg = document.getElementById('saved-msg');
+  msg.style.display='block'; setTimeout(()=>msg.style.display='none', 2500);
+}
+
+// ── NAV & AUTH ─────────────────────────────────────────────────────
+function showView(v, btn) {
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (v==='register') { renderQR(); loadReports(); }
+  if (v==='settings') renderQR();
+}
+
+function requestAdmin(view, btn) {
+  if (adminUnlocked) { showView(view, btn); return; }
+  pendingAdminView = view;
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-pw').classList.add('active');
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-error').style.display='none';
+  setTimeout(()=>document.getElementById('pw-input').focus(), 100);
+}
+
+function checkPassword() {
+  if (document.getElementById('pw-input').value === cfg.password) {
+    adminUnlocked = true;
+    document.getElementById('pw-error').style.display='none';
+    ['register','settings'].forEach(v=>{
+      const t=document.getElementById('tab-'+v);
+      t.classList.remove('locked');
+      t.textContent = v==='register' ? '📋 Register' : '⚙ Settings';
+    });
+    showView(pendingAdminView, document.getElementById('tab-'+pendingAdminView));
+  } else {
+    document.getElementById('pw-error').style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+function lockAdmin() {
+  adminUnlocked = false;
+  ['register','settings'].forEach(v=>{
+    const t=document.getElementById('tab-'+v);
+    t.classList.add('locked');
+    t.textContent = v==='register' ? '📋 Register 🔒' : '⚙ Settings 🔒';
+  });
+  showView('report', document.getElementById('tab-report'));
+}
+
+// ── PHOTO ──────────────────────────────────────────────────────────
+function handlePhoto(input) {
+  if (!input.files||!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('photo-preview-wrap').style.display='block';
+    photoAttached=true; pendingPhotoDescription=''; pendingPhotoDataUrl=e.target.result;
+    await analysePhoto(e.target.result);
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function clearPhoto() {
+  document.getElementById('photo-input').value='';
+  document.getElementById('preview-img').src='';
+  document.getElementById('photo-preview-wrap').style.display='none';
+  document.getElementById('ai-status').style.display='none';
+  pendingPhotoDescription=''; pendingPhotoDataUrl=''; photoAttached=false;
+}
+
+function setAIStatus(state, label, body) {
+  const el=document.getElementById('ai-status');
+  el.style.display='block'; el.className='ai-status '+state;
+  const lEl=document.getElementById('ai-status-label');
+  lEl.className='ai-status-label '+state; lEl.textContent=label;
+  document.getElementById('ai-status-body').textContent=body;
+}
+
+async function analysePhoto(dataUrl) {
+  if (!cfg.apiKey) {
+    setAIStatus('error','API key not configured','Add your Anthropic API key in Settings to enable photo analysis. The report will still submit without it.');
+    pendingPhotoDescription='[Photo attached — AI analysis unavailable: no API key configured]';
+    return;
+  }
+  setAIStatus('processing','Analysing photo…','AI is reading the image. This takes a few seconds.');
+  const m=dataUrl.match(/^data:(.+);base64,(.+)$/);
+  if(!m){setAIStatus('error','Could not read image','Try a different photo.');return;}
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':cfg.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:m[1],data:m[2]}},
+        {type:'text',text:'You are analysing a photo from an anonymous construction site hazard report. Provide a concise factual description of the safety hazard visible: what it is, visible conditions, any scale or severity indicators. 2-4 sentences maximum. Do not include anything that could identify the photographer.'}
+      ]}]})
+    });
+    if(!res.ok) throw new Error('API error '+res.status);
+    const data=await res.json();
+    const desc=data.content?.[0]?.text||'';
+    if(!desc) throw new Error('No description returned');
+    pendingPhotoDescription=desc;
+    setAIStatus('done','✓ Photo analysed',desc);
+  } catch(err) {
+    pendingPhotoDescription='[Photo attached — AI analysis failed: '+err.message+']';
+    setAIStatus('error','Analysis failed','Report will submit without photo description.');
+  }
+}
+
+// ── SUBMIT ─────────────────────────────────────────────────────────
+function genRef() {
+  const d=new Date(), pad=n=>String(n).padStart(2,'0');
+  return 'HH-'+String(d.getFullYear()).slice(2)+pad(d.getMonth()+1)+pad(d.getDate())+'-'+String(Math.floor(Math.random()*9000)+1000);
+}
+
+async function submitReport(e) {
+  e.preventDefault();
+  const form=e.target, btn=document.getElementById('submit-btn');
+  if (photoAttached&&!pendingPhotoDescription) {
+    btn.textContent='Waiting for photo analysis…'; btn.disabled=true;
+    await new Promise(res=>setTimeout(res,2500));
+  }
+  btn.disabled=true; btn.textContent='Submitting…';
+  const ref=genRef();
+  const report={ref, timestamp:new Date().toISOString(), type:form.type.value,
+    location:form.location.value.trim(), severity:form.severity.value,
+    description:form.description.value.trim(), action:form.action.value.trim(),
+    photoDescription:pendingPhotoDescription, photoUrl:'', status:'Open'};
+
+  // Upload photo to Supabase Storage if attached
+  if (photoAttached && pendingPhotoDataUrl) {
+    btn.textContent='Uploading photo…';
+    const photoUrl = await sbUploadPhoto(pendingPhotoDataUrl, ref);
+    if (photoUrl) report.photoUrl = photoUrl;
+  }
+
+  const ok = await sbInsert(report);
+  if (!ok) {
+    // fallback to local storage if Supabase not yet configured
+    try {
+      let local=[];
+      const ex=await window.storage.get('hazard-reports-local');
+      if(ex&&ex.value) local=JSON.parse(ex.value);
+      local.unshift(report);
+      await window.storage.set('hazard-reports-local', JSON.stringify(local));
+    } catch(err) {}
+  }
+
+  await sendNotification(report);
+  form.reset(); clearPhoto();
+  document.getElementById('form-section').style.display='none';
+  document.getElementById('success-ref').textContent=ref;
+  document.getElementById('success-screen').style.display='block';
+  window.scrollTo(0,0);
+  btn.disabled=false; btn.textContent='Submit Hazard Report';
+}
+
+function resetForm(){
+  document.getElementById('hazard-form').reset(); clearPhoto();
+  document.getElementById('success-screen').style.display='none';
+  document.getElementById('form-section').style.display='block';
+  window.scrollTo(0,0);
+}
+
+// ── EMAILJS ────────────────────────────────────────────────────────
+function sendNotification(report){
+  if(!cfg.ejService||!cfg.ejTemplate||!cfg.ejPubkey||!cfg.ejEmails.length) return Promise.resolve();
+  return new Promise(resolve=>{
+    const script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+    script.onload=async()=>{
+      emailjs.init(cfg.ejPubkey);
+      const fmt=new Intl.DateTimeFormat('en-GB',{dateStyle:'full',timeStyle:'short'});
+      const params={ref:report.ref,type:report.type,location:report.location,severity:report.severity,
+        description:report.description,action:report.action||'None stated',
+        photo_description:report.photoDescription||'No photo submitted',
+        datetime:fmt.format(new Date(report.timestamp)),project:cfg.project||'Construction Site'};
+      for(const email of cfg.ejEmails){
+        try{await emailjs.send(cfg.ejService,cfg.ejTemplate,{...params,to_email:email});}catch(err){}
+      }
+      resolve();
+    };
+    script.onerror=resolve; document.head.appendChild(script);
+  });
+}
+
+// ── REGISTER ───────────────────────────────────────────────────────
+async function loadReports() {
+  const el=document.getElementById('conn-status-reg');
+  el.className='conn-status conn-wait';
+  el.innerHTML='<div class="conn-dot"></div><span>Loading from database…</span>';
+
+  const data = await sbSelect();
+  if (data) {
+    reports = data.map(r=>({
+      id: r.id, ref:r.ref, timestamp:r.timestamp, type:r.type,
+      location:r.location, severity:r.severity, description:r.description,
+      action:r.action, photoDescription:r.photo_desc, photoUrl:r.photo_url||'', status:r.status
+    }));
+    el.className='conn-status conn-ok';
+    el.innerHTML='<div class="conn-dot"></div><span>Live — '+reports.length+' report'+(reports.length!==1?'s':'')+' loaded from Supabase</span>';
+  } else {
+    // fallback: show local
+    try {
+      const ex=await window.storage.get('hazard-reports-local');
+      reports=(ex&&ex.value)?JSON.parse(ex.value):[];
+    } catch(e){reports=[];}
+    el.className='conn-status conn-err';
+    el.innerHTML='<div class="conn-dot"></div><span>Database not connected — showing locally saved reports only. Configure Supabase in Settings.</span>';
+  }
+  renderRegister();
+}
+
+function sortBy(col){
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}
+  document.querySelectorAll('th').forEach(th=>{th.classList.remove('sorted');th.querySelector('.sort-arrow').textContent='↕';});
+  const th=document.getElementById('th-'+col);
+  if(th){th.classList.add('sorted');th.querySelector('.sort-arrow').textContent=sortDir===-1?'↓':'↑';}
+  renderRegister();
+}
+
+function getFiltered(){
+  const sv=document.getElementById('filter-severity').value;
+  const st=document.getElementById('filter-status').value;
+  const ty=document.getElementById('filter-type').value;
+  return reports.filter(r=>(!sv||r.severity===sv)&&(!st||r.status===st)&&(!ty||r.type===ty));
+}
+
+function renderRegister(){
+  const tf=document.getElementById('filter-type'),ct=tf.value;
+  const types=[...new Set(reports.map(r=>r.type).filter(Boolean))].sort();
+  tf.innerHTML='<option value="">All types</option>'+types.map(t=>`<option${t===ct?' selected':''}>${t}</option>`).join('');
+
+  const filtered=getFiltered();
+  const sorted=[...filtered].sort((a,b)=>{
+    let va=a[sortCol],vb=b[sortCol];
+    if(sortCol==='severity'){va=SEV_ORDER[va]||0;vb=SEV_ORDER[vb]||0;}
+    return va<vb?-1*sortDir:va>vb?1*sortDir:0;
+  });
+
+  const open=reports.filter(r=>r.status==='Open').length;
+  const crit=reports.filter(r=>r.severity==='Critical').length;
+  const inprog=reports.filter(r=>r.status==='In Progress').length;
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-num">${reports.length}</div><div class="stat-label">Total reports</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#d45d4d">${open}</div><div class="stat-label">Open</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#e89e52">${inprog}</div><div class="stat-label">In progress</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#e06060">${crit}</div><div class="stat-label">Critical</div></div>`;
+  document.getElementById('reg-count').textContent=`${filtered.length} of ${reports.length} report${reports.length!==1?'s':''}`;
+
+  const tbody=document.getElementById('register-body'),empty=document.getElementById('empty-state');
+  if(!sorted.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const fmt=new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+  tbody.innerHTML=sorted.map(r=>{
+    const sc='status-'+r.status.replace(' ','-');
+    const thumbHtml = r.photoUrl ? `<a href="${r.photoUrl}" target="_blank" rel="noopener"><img src="${r.photoUrl}" style="width:60px;height:45px;object-fit:cover;display:block;margin-bottom:4px;border:1px solid #3a3a35;" title="Click to view full photo"></a>` : "";
+    const pc = (r.photoDescription || r.photoUrl) ? `<div class="photo-desc-cell">${thumbHtml}${r.photoDescription ? `<span class="ai-tag">AI analysed</span><div class="photo-desc-text">${esc(r.photoDescription)}</div>` : ""}</div>` : `<span style="color:#3a3a35;font-size:12px">—</span>`;
+    return`<tr>
+      <td><span class="ref-num">${r.ref}</span></td>
+      <td style="white-space:nowrap;font-size:12px">${fmt.format(new Date(r.timestamp))}</td>
+      <td style="white-space:nowrap;font-size:12px">${esc(r.type||'')}</td>
+      <td style="font-size:12px">${esc(r.location||'')}</td>
+      <td><span class="sev-badge sev-${r.severity}">${r.severity}</span></td>
+      <td class="desc-cell"><div class="desc-text">${esc(r.description||'')}</div></td>
+      <td>${pc}</td>
+      <td style="font-size:12px;color:var(--gray)">${r.action?esc(r.action):'—'}</td>
+      <td><select class="status-select ${sc}" data-id="${r.id||''}" onchange="updateStatus(this)">
+        <option${r.status==='Open'?' selected':''}>Open</option>
+        <option${r.status==='In Progress'?' selected':''}>In Progress</option>
+        <option${r.status==='Closed'?' selected':''}>Closed</option>
+      </select></td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function updateStatus(sel){
+  const id=sel.getAttribute('data-id');
+  const status=sel.value;
+  sel.className='status-select status-'+status.replace(' ','-');
+  if(id) await sbUpdateStatus(id, status);
+  // update local cache
+  const r=reports.find(x=>x.id===id);
+  if(r) r.status=status;
+  renderRegister();
+}
+
+function exportCSV(){
+  const filtered=getFiltered();
+  const rows=[['Ref','Date','Time','Type','Location','Severity','Description','Photo analysis','Photo URL','Action taken','Status']];
+  filtered.forEach(r=>{
+    const d=new Date(r.timestamp);
+    rows.push([r.ref,d.toLocaleDateString('en-GB'),d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
+      r.type,r.location,r.severity,
+      '"'+(r.description||'').replace(/"/g,'""')+'"',
+      '"'+(r.photoDescription||'').replace(/"/g,'""')+'"',
+      r.photoUrl||'',
+      '"'+(r.action||'').replace(/"/g,'""')+'"',
+      r.status]);
+  });
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='hazard-register-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// ── QR ─────────────────────────────────────────────────────────────
+function renderQR(){
+  const url=document.getElementById('s-hostedurl').value.trim()||window.location.href.split('?')[0];
+  document.getElementById('qr-url-display').textContent=url;
+  const c=document.getElementById('qrcode'); c.innerHTML='';
+  if(url) new QRCode(c,{text:url,width:160,height:160,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H});
+}
+
+function printQR(){
+  const url=document.getElementById('s-hostedurl').value.trim()||window.location.href.split('?')[0];
+  const project=document.getElementById('s-project').value.trim()||'Construction Site';
+  const qrHtml=document.getElementById('qrcode').innerHTML;
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Hazard QR</title>
+  <style>body{font-family:Arial Narrow,Arial,sans-serif;text-align:center;padding:40px;background:#fff;color:#000}h1{font-size:32px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}.sub{font-size:14px;color:#555;margin-bottom:24px}.qr-wrap{display:inline-block;border:6px solid #000;padding:20px;margin-bottom:20px;background:#fff}.hazard-stripe{background:#f5c842;color:#000;font-size:18px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;padding:12px 0;margin:0 -40px 28px}.instr{font-size:14px;line-height:1.8;color:#333;margin-bottom:20px}.anon{font-size:12px;color:#555;border:1px solid #ccc;display:inline-block;padding:6px 16px;margin-top:8px;line-height:1.6}.url{font-size:11px;color:#999;font-family:monospace;margin-top:20px;word-break:break-all}</style>
+  </head><body>
+  <div class="hazard-stripe">⚠ Report a Hazard ⚠</div>
+  <h1>Safety Hotline</h1><p class="sub">${project}</p>
+  <div class="qr-wrap">${qrHtml}</div>
+  <div class="instr">1. Scan the QR code with your phone camera<br>2. Complete the short form — takes under 2 minutes<br>3. Attach a photo if you have one<br>4. Your report goes straight to the safety team</div>
+  <div class="anon">🔒 Completely anonymous — no name required<br>📷 Photos analysed by AI — not linked to your identity</div>
+  <div class="url">${url}</div></body></html>`);
+  win.document.close(); setTimeout(()=>win.print(),600);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────
+(async()=>{ await loadSettings(); })();
+</script>
+</body>
+</html>
